@@ -21,8 +21,8 @@ from typing import Final
 import requests
 
 # ==================== الثوابت ====================
-V2NODES_URL: Final[str] = "https://t.me/s/v2nodes"
-EXCLAVE_URL: Final[str] = "https://t.me/s/exclaveVPN"
+V2NODES_URL: Final[str] = "https://t.me/s/V2RayRootFree"
+EXCLAVE_URL: Final[str] = "https://t.me/s/V2ray_Collector"
 OUTPUT_FILE: Final[Path] = Path("index.html")
 DATA_FILE: Final[Path] = Path("stats.json")
 MANIFEST_FILE: Final[Path] = Path("manifest.json")
