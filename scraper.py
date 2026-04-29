@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 DOKA PRO - Ultimate Edition 2025
-Fetches: v2nodes + Exclave VPN
+Fetches: V2ray_Collector + V2RayRootFree
 Features: Real Ping, PWA, Glassmorphism, Animated UI
 """
 
@@ -13,8 +13,6 @@ import re
 import random
 import socket
 import time
-import subprocess
-import platform
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,8 +22,8 @@ from urllib.parse import urlparse
 import requests
 
 # ==================== الثوابت ====================
-V2NODES_URL: Final[str] = "https://t.me/s/v2nodes"
-EXCLAVE_URL: Final[str] = "https://t.me/s/exclaveVPN"
+COLLECTOR_URL: Final[str] = "https://t.me/s/V2ray_Collector"
+V2ROOT_URL: Final[str] = "https://t.me/s/V2RayRootFree"
 OUTPUT_FILE: Final[Path] = Path("index.html")
 DATA_FILE: Final[Path] = Path("stats.json")
 MANIFEST_FILE: Final[Path] = Path("manifest.json")
@@ -86,6 +84,12 @@ PROTOCOL_ICONS: Final[dict[str, str]] = {
     "unknown": "fa-cube",
 }
 
+# أيقونات المصادر
+SOURCE_ICONS: Final[dict[str, str]] = {
+    "collector": "📡",
+    "v2root": "🌐",
+}
+
 
 # ==================== دوال Ping الحقيقي ====================
 def extract_host_from_url(url: str) -> str | None:
@@ -139,8 +143,7 @@ def ping_server(url: str, attempts: int = 2) -> tuple[int | None, bool]:
 def measure_all_pings(servers: list[dict]) -> list[dict]:
     """قياس ping لكل السيرفرات بالتوازي."""
     print(f"🧪 جاري فحص {len(servers)} سيرفر حقيقياً...")
-    results = []
-
+    
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = {executor.submit(ping_server, s["url"]): i for i, s in enumerate(servers)}
         for future in as_completed(futures):
@@ -148,12 +151,10 @@ def measure_all_pings(servers: list[dict]) -> list[dict]:
             ping_ms, is_alive = future.result()
             servers[idx]["ping"] = ping_ms if ping_ms else random.randint(200, 400)
             servers[idx]["alive"] = is_alive
-            results.append(servers[idx])
 
-        # طبع ملخص
-        alive = sum(1 for s in results if s["alive"])
-        print(f"   ✅ {alive}/{len(results)} سيرفرات حية")
-    return results
+    alive = sum(1 for s in servers if s["alive"])
+    print(f"   ✅ {alive}/{len(servers)} سيرفرات حية")
+    return servers
 
 
 # ==================== دوال الجلب والتحليل ====================
@@ -184,29 +185,11 @@ def extract_v2ray_links(html_content: str) -> list[str]:
     return clean_links
 
 
-def extract_exclave_links(html_content: str) -> list[str]:
-    """استخراج روابط exclave:// من HTML."""
-    pattern = r"exclave://[^\s<\"'\s]+"
-    matches = re.findall(pattern, html_content, re.IGNORECASE)
-    seen: set[str] = set()
-    clean_links: list[str] = []
-    for link in matches:
-        cleaned = link.replace("&amp;", "&").strip()
-        if cleaned not in seen:
-            seen.add(cleaned)
-            clean_links.append(cleaned)
-    return clean_links
-
-
 def extract_protocol(url: str) -> str:
     """استخراج نوع البروتوكول من الرابط."""
     prefix = url.split("://")[0].lower()
     if prefix in SUPPORTED_PROTOCOLS:
         return prefix.upper()
-    if "exclave://" in url.lower():
-        for proto in SUPPORTED_PROTOCOLS:
-            if f"exclave://{proto}" in url.lower():
-                return proto.upper()
     return "UNKNOWN"
 
 
@@ -241,7 +224,7 @@ def generate_manifest() -> str:
     manifest = {
         "name": "DOKA PRO - V2Ray Proxy",
         "short_name": "DOKA PRO",
-        "description": "حرية التصفح بلا حدود - سيرفرات V2Ray و Exclave محدثة تلقائياً",
+        "description": "حرية التصفح بلا حدود - سيرفرات V2Ray محدثة تلقائياً",
         "start_url": "/index.html",
         "scope": "/",
         "display": "standalone",
@@ -275,18 +258,6 @@ def generate_manifest() -> str:
                 "purpose": "any maskable",
             }
         ],
-        "screenshots": [],
-        "shortcuts": [
-            {
-                "name": "VMess",
-                "url": "/?filter=vmess",
-                "icons": [{"src": "data:image/svg+xml,...", "sizes": "96x96"}],
-            },
-            {
-                "name": "VLess",
-                "url": "/?filter=vless",
-            },
-        ],
     }
     return json.dumps(manifest, indent=2, ensure_ascii=False)
 
@@ -302,15 +273,15 @@ def generate_html(all_servers: list[dict], total: int) -> str:
         proto = s["proto"].lower()
         counts[proto] = counts.get(proto, 0) + 1
 
-    total_v2nodes = sum(1 for s in all_servers if s["source"] == "v2nodes")
-    total_exclave = sum(1 for s in all_servers if s["source"] == "exclave")
+    total_collector = sum(1 for s in all_servers if s["source"] == "collector")
+    total_v2root = sum(1 for s in all_servers if s["source"] == "v2root")
 
     # حفظ الإحصائيات
     stats_data = {
         "last_updated": datetime.now(timezone.utc).isoformat(),
         "total_servers": total,
-        "v2nodes": total_v2nodes,
-        "exclave": total_exclave,
+        "collector": total_collector,
+        "v2root": total_v2root,
         "alive": sum(1 for s in all_servers if s["alive"]),
         "by_protocol": counts,
     }
@@ -332,7 +303,7 @@ def generate_html(all_servers: list[dict], total: int) -> str:
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DOKA PRO">
-    <meta name="description" content="حرية التصفح بلا حدود - سيرفرات V2Ray و Exclave محدثة تلقائياً">
+    <meta name="description" content="حرية التصفح بلا حدود - سيرفرات V2Ray محدثة تلقائياً">
     <title>DOKA PRO • V2Ray Freedom Cloud</title>
 
     <!-- PWA Manifest -->
@@ -370,7 +341,7 @@ def generate_html(all_servers: list[dict], total: int) -> str:
             --warning: #f59e0b;
             --gradient-1: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
             --gradient-2: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
-            --gradient-exclave: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --gradient-v2root: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
             --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
             --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
             --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05);
@@ -868,24 +839,24 @@ def generate_html(all_servers: list[dict], total: int) -> str:
     <section class="hero">
         <div class="hero-badge">
             <i class="fas fa-shield-check"></i>
-            <span>v2nodes + Exclave • تحديث تلقائي كل 3 ساعات</span>
+            <span>V2ray Collector + V2RayRoot • تحديث تلقائي كل 3 ساعات</span>
         </div>
         <h1 class="hero-title">
             <span class="gradient-text">حرية</span> التصفح<br>بلا حدود
         </h1>
-        <p class="hero-subtitle">سيرفرات V2Ray و Exclave VPN محدثة تلقائياً • اختر بروتوكولك المفضل وانطلق</p>
+        <p class="hero-subtitle">سيرفرات V2Ray محدثة تلقائياً من أقوى المصادر • اختر بروتوكولك المفضل وانطلق</p>
         <div class="counters-row">
             <div class="counter-card">
                 <div class="counter-number">{total}</div>
                 <div class="counter-label">🔰 إجمالي السيرفرات</div>
             </div>
             <div class="counter-card">
-                <div class="counter-number" style="background:var(--gradient-2); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">{total_v2nodes}</div>
-                <div class="counter-label">📡 V2Ray عام</div>
+                <div class="counter-number" style="background:var(--gradient-2); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">{total_collector}</div>
+                <div class="counter-label">📡 V2ray Collector</div>
             </div>
             <div class="counter-card">
-                <div class="counter-number" style="background:var(--gradient-exclave); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">{total_exclave}</div>
-                <div class="counter-label">⬡ Exclave حصري</div>
+                <div class="counter-number" style="background:var(--gradient-v2root); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">{total_v2root}</div>
+                <div class="counter-label">🌐 V2RayRoot</div>
             </div>
         </div>
     </section>
@@ -898,8 +869,8 @@ def generate_html(all_servers: list[dict], total: int) -> str:
             <button class="tab-btn" data-filter="vless"><span class="tab-dot" style="background:#06b6d4"></span> VLess <span class="tab-count">{counts.get('vless', 0)}</span></button>
             <button class="tab-btn" data-filter="trojan"><span class="tab-dot" style="background:#f59e0b"></span> Trojan <span class="tab-count">{counts.get('trojan', 0)}</span></button>
             <button class="tab-btn" data-filter="ss"><span class="tab-dot" style="background:#10b981"></span> SS <span class="tab-count">{counts.get('ss', 0)}</span></button>
-            <button class="tab-btn" data-filter="v2nodes">📡 v2nodes <span class="tab-count">{total_v2nodes}</span></button>
-            <button class="tab-btn" data-filter="exclave">⬡ Exclave <span class="tab-count">{total_exclave}</span></button>
+            <button class="tab-btn" data-filter="collector">📡 Collector <span class="tab-count">{total_collector}</span></button>
+            <button class="tab-btn" data-filter="v2root">🌐 V2Root <span class="tab-count">{total_v2root}</span></button>
         </div>
     </section>
 
@@ -935,6 +906,7 @@ def generate_html(all_servers: list[dict], total: int) -> str:
         const serversData = {servers_json};
         const PROTOCOL_COLORS = {json.dumps(PROTOCOL_COLORS)};
         const PROTOCOL_ICONS = {json.dumps(PROTOCOL_ICONS)};
+        const SOURCE_ICONS = {json.dumps(SOURCE_ICONS)};
         let currentFilter = 'all';
         let chartInstance = null;
 
@@ -955,7 +927,7 @@ def generate_html(all_servers: list[dict], total: int) -> str:
             const grid = document.getElementById('servers-grid');
             const noMsg = document.getElementById('no-servers');
             let filtered = filter === 'all' ? serversData : serversData.filter(s => {{
-                if (filter === 'v2nodes' || filter === 'exclave') return s.source === filter;
+                if (filter === 'collector' || filter === 'v2root') return s.source === filter;
                 return s.proto.toLowerCase() === filter;
             }});
             if (filtered.length === 0) {{ grid.innerHTML = ''; noMsg.style.display = 'block'; return; }}
@@ -969,6 +941,7 @@ def generate_html(all_servers: list[dict], total: int) -> str:
                 const pingDisplay = alive ? s.ping+'ms' : 'ميت';
                 const statusClass = alive ? 'status-alive' : 'status-dead';
                 const statusColor = alive ? 'var(--success)' : 'var(--danger)';
+                const sourceIcon = SOURCE_ICONS[s.source] || '';
                 html += `
                 <div class="server-card">
                     <div class="server-card-header">
@@ -976,7 +949,7 @@ def generate_html(all_servers: list[dict], total: int) -> str:
                             <span class="server-flag">${{s.country}}</span>
                             <span class="server-proto-badge" style="background:${{protoColor}}"><i class="fas ${{protoIcon}}"></i> ${{s.proto}}</span>
                             <span class="server-status" style="color:${{statusColor}}"><span class="status-dot ${{statusClass}}"></span> ${{alive?'حي':'ميت'}}</span>
-                            <span style="font-size:0.7rem; color:${{s.source==='exclave'?'#a855f7':'var(--text-secondary)'}};">${{s.source==='exclave'?'⬡':''}}</span>
+                            <span style="font-size:0.7rem;" title="${{s.source}}">${{sourceIcon}}</span>
                         </div>
                         <span style="font-size:0.8rem; color:var(--text-secondary);">${{pingDisplay}}</span>
                     </div>
@@ -1024,7 +997,7 @@ def generate_html(all_servers: list[dict], total: int) -> str:
         }});
 
         renderCards('all');
-        console.log('%c🚀 DOKA PRO %cUltimate %cReady', 'color:#6366f1;font-size:2rem;font-weight:900;', 'color:#a855f7;', 'color:#10b981;');
+        console.log('%c🚀 DOKA PRO %c2 Sources %cReady', 'color:#6366f1;font-size:2rem;font-weight:900;', 'color:#10b981;', 'color:#a855f7;');
         console.log('%cTotal:%c {total} %cservers', 'color:#64748b;', 'color:#6366f1;font-weight:bold;', 'color:#64748b;');
     </script>
 </body>
@@ -1037,18 +1010,18 @@ def main() -> None:
     print("🚀 DOKA PRO - Ultimate Edition 2025")
     print("=" * 50)
 
-    # جلب البيانات
-    v2nodes_html = fetch_telegram_page(V2NODES_URL, "v2nodes")
-    exclave_html = fetch_telegram_page(EXCLAVE_URL, "Exclave VPN")
+    # جلب البيانات من القناتين الجديدتين
+    collector_html = fetch_telegram_page(COLLECTOR_URL, "V2ray_Collector")
+    v2root_html = fetch_telegram_page(V2ROOT_URL, "V2RayRootFree")
 
     # استخراج الروابط
-    v2nodes_links = extract_v2ray_links(v2nodes_html) if v2nodes_html else []
-    exclave_links = extract_exclave_links(exclave_html) if exclave_html else []
-    print(f"📊 v2nodes: {len(v2nodes_links)} | Exclave: {len(exclave_links)}")
+    collector_links = extract_v2ray_links(collector_html) if collector_html else []
+    v2root_links = extract_v2ray_links(v2root_html) if v2root_html else []
+    print(f"📊 Collector: {len(collector_links)} | V2Root: {len(v2root_links)}")
 
     # بناء قائمة السيرفرات
-    all_servers = build_server_list(v2nodes_links, "v2nodes")
-    all_servers += build_server_list(exclave_links, "exclave")
+    all_servers = build_server_list(collector_links, "collector")
+    all_servers += build_server_list(v2root_links, "v2root")
 
     if not all_servers:
         print("⚠️ لا توجد سيرفرات!")
@@ -1064,8 +1037,8 @@ def main() -> None:
 
     OUTPUT_FILE.write_text(html_output, encoding="utf-8")
     print(f"\n🎉 تم! {total} سيرفر ({alive_count} حي)")
-    print(f"   • v2nodes: {sum(1 for s in all_servers if s['source']=='v2nodes')}")
-    print(f"   • Exclave: {sum(1 for s in all_servers if s['source']=='exclave')}")
+    print(f"   • Collector: {sum(1 for s in all_servers if s['source']=='collector')}")
+    print(f"   • V2Root: {sum(1 for s in all_servers if s['source']=='v2root')}")
     print(f"   • PWA: جاهز للتثبيت")
     print(f"   • Ping: حقيقي ✅")
 
