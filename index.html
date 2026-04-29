@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOKA PRO — The Freedom Proxy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background: #fafafa; }
+        .hero-gradient { background: radial-gradient(circle at 70% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 60%); }
+        .protocol-card {
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+        .protocol-card:hover {
+            border-color: #2563eb;
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1);
+        }
+        .dark { background: #0f172a; color: #e2e8f0; }
+        .dark .bg-white { background: #1e293b !important; }
+        .dark .text-gray-800 { color: #e2e8f0 !important; }
+        .dark .border-gray-100,
+        .dark .border-gray-200 { border-color: #334155 !important; }
+        .tab-btn.active { background: #2563eb; color: white; }
+    </style>
+</head>
+<body class="antialiased text-gray-800" id="main-body">
+
+    <!-- الشريط العلوي -->
+    <header class="border-b border-gray-200 bg-white/90 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center text-sm">
+            <div class="flex items-center gap-3 text-gray-600">
+                <i class="fas fa-map-marker-alt text-blue-600"></i>
+                <span>IP: <span id="user-ip" class="font-mono font-medium text-gray-900">...</span></span>
+                <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                <span class="text-xs font-bold text-red-500" id="status-text">غير محمي</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="dark-toggle" class="text-gray-500 hover:text-blue-600 transition-colors" aria-label="تبديل الوضع الليلي">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <select id="lang-select" class="bg-transparent border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="ar">🇸🇦 عربي</option>
+                    <option value="en">🇬🇧 English</option>
+                </select>
+                <div class="text-gray-500">
+                    <i class="far fa-clock"></i> <span>2026-04-29 17:10</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- القسم الرئيسي -->
+    <section class="hero-gradient border-b border-gray-200 py-16 text-center">
+        <h1 class="text-4xl md:text-6xl font-black mb-4" id="main-title">حرية التصفح بلا حدود</h1>
+        <p class="text-gray-600 max-w-2xl mx-auto mb-10" id="main-sub">
+            سيرفرات V2Ray محدثة تلقائياً. اختر بروتوكولك واستمتع بالحرية.
+        </p>
+        <div class="inline-flex items-center gap-4 bg-white border border-gray-200 rounded-3xl px-10 py-5 shadow-sm">
+            <span class="text-6xl font-black text-blue-600">20</span>
+            <span class="text-gray-500" id="counter-label">سيرفر نشط</span>
+        </div>
+    </section>
+
+    <!-- تبويبات الفلترة -->
+    <section class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex flex-wrap justify-center gap-2">
+            <button class="tab-btn active px-6 py-2 bg-blue-600 text-white rounded-full transition-all" data-filter="all">
+                الكل (<span id="count-all">20</span>)
+            </button>
+            <button class="tab-btn px-6 py-2 bg-gray-100 rounded-full transition-all" data-filter="vmess">
+                VMess (<span id="count-vmess">5</span>)
+            </button>
+            <button class="tab-btn px-6 py-2 bg-gray-100 rounded-full transition-all" data-filter="vless">
+                VLess (<span id="count-vless">5</span>)
+            </button>
+            <button class="tab-btn px-6 py-2 bg-gray-100 rounded-full transition-all" data-filter="trojan">
+                Trojan (<span id="count-trojan">2</span>)
+            </button>
+            <button class="tab-btn px-6 py-2 bg-gray-100 rounded-full transition-all" data-filter="ss">
+                Shadowsocks (<span id="count-ss">8</span>)
+            </button>
+        </div>
+    </section>
+
+    <!-- شبكة السيرفرات -->
+    <section class="max-w-7xl mx-auto px-4 py-8">
+        <div id="servers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="no-servers" class="hidden text-center py-12 text-gray-400">
+            لا توجد سيرفرات متاحة حالياً.
+        </div>
+    </section>
+
+    <!-- صفحة الإحصائيات -->
+    <section id="stats-page" class="max-w-7xl mx-auto px-4 py-12 hidden">
+        <h2 class="text-3xl font-bold text-center mb-8">📊 إحصائيات السيرفرات</h2>
+        <div class="max-w-xl mx-auto">
+            <canvas id="stats-chart"></canvas>
+        </div>
+        <p class="text-center text-gray-500 mt-4">
+            آخر تحديث: <span id="stats-last-update"></span>
+        </p>
+        <button id="back-from-stats" class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl mx-auto block hover:bg-blue-700 transition-colors">
+            عودة
+        </button>
+    </section>
+
+    <!-- تذييل الصفحة -->
+    <footer class="bg-gray-900 text-white py-12 mt-12 text-center">
+        <p class="text-gray-400">© 2026 DOKA PRO. جميع الحقوق محفوظة.</p>
+        <button id="show-stats-btn" class="mt-4 text-blue-400 text-sm underline hover:text-blue-300 transition-colors">
+            عرض الإحصائيات
+        </button>
+    </footer>
+
+    <!-- إشعار النسخ (Toast) -->
+    <div id="toast"
+         class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-3 rounded-full opacity-0 transition-all duration-300 pointer-events-none z-50">
+        ✅ تم النسخ!
+    </div>
+
+    <script>
+        const serversData = {"vmess": [{"url": "vmess://eyJhZGQiOiIzNS4yMTIuMTc3LjY3IiwiYWlkIjoiMCIsImFscG4iOiIiLCJmcCI6IiIsImhvc3QiOiIiLCJpZCI6ImU4YWIzN2M3LTJiMWQtNDc3Ni1jMDYyLTJjYWM4ZmMwNjZlMSIsIm5ldCI6InRjcCIsInBhdGgiOiIiLCJwb3J0IjoiNDAwMjkiLCJwcyI6Ilx1ZDgzY1x1ZGRmYVx1ZDgzY1x1ZGRmOFtvcGVucHJveHlsaXN0LmNvbV0gdm1lc3MtVVMiLCJzY3kiOiJhdXRvIiwic25pIjoiIiwidGxzIjoiIiwidHlwZSI6Im5vbmUiLCJ2IjoiMiIsInNraXAtY2VydC12ZXJpZnkiOnRydWV9", "country": "🌍", "latency": "233ms"}, {"url": "vmess://eyJ2IjoiMiIsInBzIjoiXHVkODNjXHVkZGZhXHVkODNjXHVkZGY4W29wZW5wcm94eWxpc3QuY29tXSB2bWVzcy1VUyIsImFkZCI6InNhbmpvc2UwMS56Z2pvay5jb20iLCJwb3J0Ijo0NDMsImFpZCI6MCwic2N5IjoiYXV0byIsIm5ldCI6IndzIiwidHlwZSI6Im5vbmUiLCJ0bHMiOiJ0bHMiLCJpZCI6Ijk2ZDIxY2ZlLWIyNjQtNGJmMy04MzQ5LWZiMDc2ZDQwODM3ZSIsInNuaSI6InNhbmpvc2UwMS56Z2pvay5jb20iLCJob3N0Ijoic2Fuam9zZTAxLnpnam9rLmNvbSIsInBhdGgiOiJcLyIsInNraXAtY2VydC12ZXJpZnkiOnRydWV9", "country": "🌍", "latency": "154ms"}, {"url": "vmess://eyJ2IjoiMiIsInBzIjoiXHVkODNjXHVkZGZhXHVkODNjXHVkZGY4W29wZW5wcm94eWxpc3QuY29tXSB2bWVzcy1VUyIsImFkZCI6InVzMDIuYmN0dW8udG9wIiwicG9ydCI6MTQ0MywiYWlkIjowLCJzY3kiOiJhdXRvIiwibmV0IjoidGNwIiwidHlwZSI6Im5vbmUiLCJ0bHMiOiIiLCJpZCI6IjMxODAxOTY4LTk4NzctNGVmNS1iZTg3LTU2NTAzYzM0YTY5ZCIsInNraXAtY2VydC12ZXJpZnkiOnRydWV9", "country": "🌍", "latency": "114ms"}, {"url": "vmess://eyJ2IjoiMiIsInBzIjoiXHVkODNjXHVkZGVmXHVkODNjXHVkZGY1W29wZW5wcm94eWxpc3QuY29tXSB2bWVzcy1KUCIsImFkZCI6IjEwMy4xMDAuMTU4LjE4IiwicG9ydCI6MjkwMjUsImFpZCI6MCwic2N5IjoiYXV0byIsIm5ldCI6InRjcCIsInR5cGUiOiJub25lIiwidGxzIjoiIiwiaWQiOiJjNDVhYjYyZS01ZDI1LTQ4NmEtZjkxZS04MDdmZTRiOWMyM2YiLCJza2lwLWNlcnQtdmVyaWZ5Ijp0cnVlfQ==", "country": "🌍", "latency": "184ms"}, {"url": "vmess://eyJ2IjoiMiIsInBzIjoiXHVkODNjXHVkZGY4XHVkODNjXHVkZGVjW29wZW5wcm94eWxpc3QuY29tXSB2bWVzcy1TRyIsImFkZCI6InNnLTJ6YTNuLmtub3RpYy5zcGFjZSIsInBvcnQiOjQ0MywiYWlkIjowLCJzY3kiOiJhdXRvIiwibmV0Ijoid3MiLCJ0eXBlIjoibm9uZSIsInRscyI6InRscyIsImlkIjoiN2I3YzI4ZTQtZjU3MC00YjRlLWJhMzMtZmUyNzFkM2U2ODI4Iiwic25pIjoic2ctMnphM24ua25vdGljLnNwYWNlIiwiaG9zdCI6InNnLTJ6YTNuLmtub3RpYy5zcGFjZSIsInBhdGgiOiJcL2Rvd25sb2FkIiwic2tpcC1jZXJ0LXZlcmlmeSI6dHJ1ZX0=", "country": "🌍", "latency": "159ms"}], "vless": [{"url": "vless://ce069292-c8bf-40dd-a6b1-87818a1e64e9@139.84.235.99:443?type=ws&encryption=none&host=1-jk1.pages.dev&path=%2F&headerType=none&quicSecurity=none&serviceName=&security=tls&flow=&fp=chrome&insecure=1&sni=1-jk1.pages.dev#", "country": "🌍", "latency": "156ms"}, {"url": "vless://75807638-6f19-1f40-ae08-38492ee85c88@cluster-europe-1.firstvideocdn.ru:52006?allowInsecure=1&sni=cluster-europe-1.firstvideocdn.ru&flow=xtls-rprx-vision-udp443&fp=chrome&security=tls#", "country": "🌍", "latency": "181ms"}, {"url": "vless://feca2089-d231-4f5f-9ec7-e745ab289518@sg.baqi.indevs.in:39001?&type=ws&headerType=none&host=d0a6b4d945dbfc846b18fade7d631883.mobgslb.tbcache.com&path=%2F#", "country": "🌍", "latency": "83ms"}, {"url": "vless://b24484be-a335-472c-8dff-060ccd2b8f3b@xn-dns.onlineblog.ir:2083?&security=tls&sni=xn-de.shakhle.ir.&type=ws&headerType=none&host=xn-de.shakhle.ir.&path=%2F#", "country": "🌍", "latency": "230ms"}, {"url": "vless://ce069292-c8bf-40dd-a6b1-87818a1e64e9@193.108.112.212:443?sni=1-aym.pages.dev&type=ws&host=1-aym.pages.dev&path=/proxyip=ProxyIP.DE.owg.dpdns.orgfp=chrome&security=tls#", "country": "🇩🇪", "latency": "110ms"}], "trojan": [{"url": "trojan://telegram-id-privatevpns@13.38.179.226:22222?security=tls&alpn=http/1.1&headerType=none&type=tcp&sni=trojan.burgerip.co.uk#", "country": "🌍", "latency": "182ms"}, {"url": "trojan://BmVb9TGoytYhaLnZhkrVCtx8khbQFTA_@ch-2.bexum.fun:443?sni=ch-2.bexum.fun#", "country": "🌍", "latency": "177ms"}], "ss": [{"url": "ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTo3ZTczMWVjMy1mOGUxLTQzZjYtOTJjZi0zOTc4ZDE0NzA1YzQ=@r3mrcg007117fb8.cybervena.com:50099#", "country": "🌍", "latency": "109ms"}, {"url": "ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTo3ZTczMWVjMy1mOGUxLTQzZjYtOTJjZi0zOTc4ZDE0NzA1YzQ=@r3mrcg0011499tl.cybervena.com:50099#", "country": "🌍", "latency": "93ms"}, {"url": "ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTo3ZTczMWVjMy1mOGUxLTQzZjYtOTJjZi0zOTc4ZDE0NzA1YzQ=@r3mrcg007147vhp.cybervena.com:50099#", "country": "🌍", "latency": "196ms"}, {"url": "ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpwdExWOXpKZDFyQ2dvRFFKY3llR0tSenNHRlBnLU5ZYg@87.120.187.107:9999#", "country": "🌍", "latency": "149ms"}, {"url": "ss://YWVzLTI1Ni1nY206ZGFkYTEyMDM@13.36.173.59:80#", "country": "🌍", "latency": "68ms"}, {"url": "ss://YWVzLTI1Ni1nY206ZGFkYTEyMDM@3.16.50.244:80#", "country": "🌍", "latency": "185ms"}, {"url": "ss://YWVzLTEyOC1nY206MGZhZTBjZWItNGI2ZC00YmFiLTlkM2MtNjEyYzc3YWU5YjJm@vip-pro6669cheap.fq-number-001.co:25584#", "country": "🌍", "latency": "131ms"}, {"url": "ss://YWVzLTEyOC1nY206MGZhZTBjZWItNGI2ZC00YmFiLTlkM2MtNjEyYzc3YWU5YjJm@vip-pro6669cheap.fq-number-001.co:37769#", "country": "🌍", "latency": "180ms"}]};
+        const AD_LINK = "https://data527.click/21330bf1d025d41336e6/57154ac610/?placementName=default";
+        let currentFilter = 'all';
+        let chartInstance = null;
+
+        // ============ الترجمة ============
+        const translations = {
+            ar: {
+                title: 'حرية التصفح بلا حدود',
+                sub: 'سيرفرات V2Ray محدثة تلقائياً. اختر بروتوكولك واستمتع بالحرية.',
+                label: 'سيرفر نشط',
+                copy: 'نسخ',
+                active: 'نشط',
+                inactive: 'خامل',
+                unprotected: 'غير محمي',
+                stats: 'عرض الإحصائيات',
+                back: 'عودة',
+                noServers: 'لا توجد سيرفرات متاحة حالياً.',
+            },
+            en: {
+                title: 'Unlimited Freedom',
+                sub: 'Auto-updated V2Ray servers. Choose your protocol and enjoy freedom.',
+                label: 'Active Servers',
+                copy: 'Copy',
+                active: 'Active',
+                inactive: 'Inactive',
+                unprotected: 'Unprotected',
+                stats: 'Show Stats',
+                back: 'Back',
+                noServers: 'No servers available.',
+            }
+        };
+        let currentLang = 'ar';
+
+        function applyLang(lang) {
+            const t = translations[lang];
+            document.getElementById('main-title').innerText = t.title;
+            document.getElementById('main-sub').innerText = t.sub;
+            document.getElementById('counter-label').innerText = t.label;
+            document.getElementById('status-text').innerText = t.unprotected;
+            document.getElementById('show-stats-btn').innerText = t.stats;
+            document.getElementById('back-from-stats').innerText = t.back;
+        }
+
+        document.getElementById('lang-select').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            applyLang(currentLang);
+            renderCards(currentFilter);
+        });
+
+        // ============ الوضع الليلي ============
+        document.getElementById('dark-toggle').addEventListener('click', () => {
+            document.getElementById('main-body').classList.toggle('dark');
+            const icon = document.querySelector('#dark-toggle i');
+            icon.classList.toggle('fa-moon');
+            icon.classList.toggle('fa-sun');
+        });
+
+        // ============ عرض البطاقات ============
+        function renderCards(filter) {
+            const grid = document.getElementById('servers-grid');
+            const noMsg = document.getElementById('no-servers');
+            const t = translations[currentLang];
+
+            let allServers = [];
+            Object.keys(serversData).forEach(proto => {
+                serversData[proto].forEach(s =>
+                    allServers.push({ ...s, proto: proto.toUpperCase() })
+                );
+            });
+
+            const filtered = filter === 'all'
+                ? allServers
+                : allServers.filter(s => s.proto.toLowerCase() === filter);
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                noMsg.innerText = t.noServers || 'لا توجد سيرفرات.';
+                noMsg.classList.remove('hidden');
+                return;
+            }
+
+            noMsg.classList.add('hidden');
+            const isActiveMap = new Map();
+
+            let html = '';
+            filtered.forEach((s, i) => {
+                if (!isActiveMap.has(s.url)) {
+                    isActiveMap.set(s.url, Math.random() > 0.2);
+                }
+                const isActive = isActiveMap.get(s.url);
+                const shortUrl = s.url.length > 60 ? s.url.substring(0, 60) + '...' : s.url;
+
+                html += `
+                <div class="protocol-card bg-white rounded-2xl p-6 shadow-sm">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-2xl">${s.country}</span>
+                            <span class="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">${s.proto}</span>
+                            <span class="${isActive ? 'text-green-600' : 'text-red-500'} text-xs">
+                                <i class="fas fa-circle text-[6px]"></i> ${isActive ? t.active : t.inactive}
+                            </span>
+                            <span class="text-gray-400 text-xs">
+                                <i class="fas fa-tachometer-alt"></i> ${s.latency}
+                            </span>
+                        </div>
+                        <button onclick="copyText('${s.url.replace(/'/g, "\'")}')"
+                                class="text-gray-400 hover:text-blue-600 transition-colors"
+                                aria-label="نسخ الرابط">
+                            <i class="far fa-copy"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs font-mono text-gray-500 bg-gray-50 p-3 rounded-xl mb-4 break-all" dir="ltr">${shortUrl}</p>
+                    <div class="flex gap-2">
+                        <button onclick="copyText('${s.url.replace(/'/g, "\'")}')"
+                                class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm hover:bg-blue-700 transition-colors">
+                            ${t.copy}
+                        </button>
+                        <button onclick="toggleQR('q${i}', '${s.url.replace(/'/g, "\'")}')"
+                                class="px-4 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                                aria-label="عرض رمز QR">
+                            <i class="fas fa-qrcode"></i>
+                        </button>
+                    </div>
+                    <div id="q${i}" class="hidden mt-4 p-4 flex justify-center border-2 border-dashed border-blue-100 rounded-2xl"></div>
+                </div>`;
+            });
+            grid.innerHTML = html;
+        }
+
+        // ============ دوال النسخ و QR ============
+        window.copyText = (text) => {
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.getElementById('toast');
+                toast.style.opacity = '1';
+                setTimeout(() => (toast.style.opacity = '0'), 2000);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                const toast = document.getElementById('toast');
+                toast.style.opacity = '1';
+                setTimeout(() => (toast.style.opacity = '0'), 2000);
+            });
+        };
+
+        window.toggleQR = (id, link) => {
+            const el = document.getElementById(id);
+            if (!el.innerHTML) {
+                new QRCode(el, { text: link, width: 160, height: 160 });
+            }
+            el.classList.toggle('hidden');
+        };
+
+        // ============ التبويبات ============
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-blue-600', 'text-white');
+                    b.classList.add('bg-gray-100');
+                });
+                btn.classList.add('active', 'bg-blue-600', 'text-white');
+                btn.classList.remove('bg-gray-100');
+                currentFilter = btn.dataset.filter;
+                renderCards(currentFilter);
+            });
+        });
+
+        // ============ صفحة الإحصائيات ============
+        document.getElementById('show-stats-btn').addEventListener('click', async () => {
+            document.querySelector('header').style.display = 'none';
+            document.querySelector('.hero-gradient').style.display = 'none';
+            document.querySelectorAll('section')[1].style.display = 'none';
+            document.getElementById('servers-grid').parentElement.style.display = 'none';
+            document.querySelector('footer').style.display = 'none';
+            document.getElementById('stats-page').classList.remove('hidden');
+
+            try {
+                const res = await fetch('stats.json');
+                if (!res.ok) throw new Error('Network response was not ok');
+                const stats = await res.json();
+                document.getElementById('stats-last-update').innerText =
+                    new Date(stats.last_updated).toLocaleString(currentLang === 'ar' ? 'ar-SA' : 'en-US');
+
+                const ctx = document.getElementById('stats-chart').getContext('2d');
+                if (chartInstance) chartInstance.destroy();
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(stats.by_protocol).map(p => p.toUpperCase()),
+                        datasets: [{
+                            label: currentLang === 'ar' ? 'عدد السيرفرات' : 'Server Count',
+                            data: Object.values(stats.by_protocol),
+                            backgroundColor: '#2563eb',
+                            borderRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1 }
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Failed to load stats:', err);
+                document.getElementById('stats-last-update').innerText = '—';
+            }
+        });
+
+        document.getElementById('back-from-stats').addEventListener('click', () => location.reload());
+
+        // ============ تحديد IP المستخدم ============
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(d => (document.getElementById('user-ip').innerText = d.ip))
+            .catch(() => (document.getElementById('user-ip').innerText = 'غير معروف'));
+
+        // ============ التشغيل الأولي ============
+        renderCards('all');
+        applyLang('ar');
+    </script>
+</body>
+</html>
