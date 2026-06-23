@@ -1,9 +1,9 @@
 {
-  "last_updated": "2026-06-23T03:40:15.217623+00:00",
+  "last_updated": "2026-06-23T09:41:33.545758+00:00",
   "total_servers": 54,
   "collector": 34,
   "v2root": 20,
-  "alive": 26,
+  "alive": 28,
   "by_protocol": {
     "vless": 27,
     "vmess": 8,
