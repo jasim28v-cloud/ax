@@ -1,13 +1,13 @@
 {
-  "last_updated": "2026-08-28T23:59:27.661445+00:00",
+  "last_updated": "2026-08-29T06:56:53.033127+00:00",
   "total_servers": 47,
   "collector": 33,
   "v2root": 14,
   "alive": 35,
   "by_protocol": {
+    "vmess": 8,
     "vless": 19,
-    "trojan": 12,
-    "vmess": 7,
+    "trojan": 11,
     "ss": 9
   }
 }
